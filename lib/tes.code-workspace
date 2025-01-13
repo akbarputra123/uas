@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"name": "tes",
+			"path": ".."
+		},
+		{
+			"name": "assets",
+			"path": "C:/Users/akbar/Downloads/prtm2/assets"
+		}
+	],
+	"settings": {
+		"java.compile.nullAnalysis.mode": "automatic",
+		"java.configuration.updateBuildConfiguration": "automatic"
+	}
+}

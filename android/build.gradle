@@ -1,0 +1,30 @@
+buildscript {
+    repositories {
+        google()  // Repositori Google untuk plugin dan dependensi Firebase
+        mavenCentral()  // Repositori Maven Central
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.4.1' // Sesuaikan dengan plugin terbaru yang kompatibel dengan Gradle 8.3
+        // Plugin untuk Google Services
+        classpath 'com.google.gms:google-services:4.4.0'
+        // Plugin Firebase Crashlytics (opsional)
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.4'
+    }
+}
+
+allprojects {
+    repositories {
+        google()  // Repositori Google
+        mavenCentral()  // Repositori Maven Central
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}

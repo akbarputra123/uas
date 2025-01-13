@@ -1,0 +1,55 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // Plugin Flutter
+    id "dev.flutter.flutter-gradle-plugin"
+    // Tambahkan plugin Google Services
+    id "com.google.gms.google-services"
+    // (Opsional) Tambahkan Firebase Crashlytics jika diperlukan
+    id "com.google.firebase.crashlytics"
+}
+
+android {
+    namespace = "com.example.tes"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        applicationId = "com.example.tes"
+        minSdkVersion 23  // Perbarui minSdkVersion menjadi 23 atau lebih tinggi
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutter.versionCode
+        versionName flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+
+flutter {
+    source = "../.."
+}
+
+// Tambahkan Firebase SDK
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:32.2.2') // Versi BOM terbaru
+    implementation 'com.google.firebase:firebase-analytics' // Firebase Analytics
+    // Tambahkan dependensi Firebase lainnya jika diperlukan
+    // contoh: implementation 'com.google.firebase:firebase-auth'
+}
+
+// Aktifkan plugin Google Services di akhir file
+apply plugin: 'com.google.gms.google-services'
