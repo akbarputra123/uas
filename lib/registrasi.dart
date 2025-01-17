@@ -1,8 +1,8 @@
 import 'login.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class RegistrasiPages extends StatefulWidget {
   const RegistrasiPages({super.key});
@@ -29,49 +29,58 @@ class _RegistrasiPagesState extends State<RegistrasiPages> {
     confirmPasswordController.dispose();
     super.dispose();
   }
-Future<void> registerUser(String nomor, String email, String password) async {
-  const url = 'http://10.0.2.2/uts/user.php'; // Ganti dengan URL backend Anda
-
+Future<void> registerUser(String phone, String email, String password) async {
   try {
-    final response = await http.post(
-      Uri.parse(url),
-      body: {
-        'nomor': nomor,
-        'email': email,
-        'password': password,
-      },
+    // Create user with email and password using Firebase Authentication
+    UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
     );
 
-    // Cek apakah request berhasil
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-
-      if (responseData['status'] == 'success') {
-        // Registrasi berhasil
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'])),
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPages()),
-        );
-      } else {
-        // Jika nomor atau email sudah terdaftar atau error lainnya
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'])),
-        );
-      }
-    } else {
+    // If the registration is successful
+    if (userCredential.user != null) {
+      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request gagal')),
+        SnackBar(content: Text('Registration successful!')),
+      );
+
+      // Optionally, you can store additional user info like phone number in Firebase Firestore
+      // Firestore.instance.collection('users').doc(userCredential.user!.uid).set({
+      //   'phone': phone,
+      // });
+
+      // Navigate to the login page after registration
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPages()),
+      );
+    } else {
+      // If user credential is null, show failure message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registration failed!')),
       );
     }
-  } catch (error) {
+  } on FirebaseAuthException catch (e) {
+    // Handle Firebase-specific errors (e.g., email already in use)
+    String errorMessage = 'An error occurred. Please try again.';
+    
+    if (e.code == 'email-already-in-use') {
+      errorMessage = 'The email address is already in use by another account.';
+    } else if (e.code == 'weak-password') {
+      errorMessage = 'The password is too weak.';
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $error')),
+      SnackBar(content: Text(errorMessage)),
+    );
+  } catch (e) {
+    // Handle any other errors
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
     );
   }
 }
+
 
   @override
   Widget build(BuildContext context) {
@@ -241,10 +250,11 @@ Future<void> registerUser(String nomor, String email, String password) async {
     if (_formKey.currentState!.validate()) {
       // Proses registrasi
       registerUser(
-        phoneController.text,
-        emailController.text,
-        passwordController.text,
-      );
+  phoneController.text,  // Now passing the phone
+  emailController.text,
+  passwordController.text,
+);
+
     }
   },
   child: Container(

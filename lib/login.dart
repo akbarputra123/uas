@@ -6,10 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart'; // Ganti dengan halaman yang sesuai setelah login
 import 'package:flutter/services.dart'; // Untuk menangani error di iOS
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tes/mhs/home.dart';
 
 class LoginPages extends StatefulWidget {
   const LoginPages({super.key});
@@ -23,7 +20,7 @@ class _LoginPagesState extends State<LoginPages> {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // TextEditingControllers for phone and password fields
-  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   // FormKey for validation
@@ -60,7 +57,7 @@ class _LoginPagesState extends State<LoginPages> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const HomePage(), // Ganti dengan halaman ProfilPage
+          builder: (context) =>  HomePages(), // Ganti dengan halaman ProfilPage
         ),
       );
     }
@@ -70,7 +67,6 @@ class _LoginPagesState extends State<LoginPages> {
     // Anda bisa menampilkan pesan kesalahan jika diperlukan
   }
 }
-
   // Fungsi untuk login dengan Apple
   Future<void> _signInWithApple() async {
     try {
@@ -91,58 +87,75 @@ class _LoginPagesState extends State<LoginPages> {
       print("Error during Apple Sign-In: $e");
     }
   }
-
 // Ambil id_user yang disimpan di SharedPreferences
   Future<int?> getUserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getInt('id_user');
   }
-Future<void> _signInWithPhonePassword() async {
-  String phone = phoneController.text.replaceAll(RegExp(r'\D'), '');  // Menghapus semua karakter non-angka
-  String password = passwordController.text;
+Future<void> _signInWithEmailPassword() async {
+  String email = emailController.text.trim(); // Menghapus spasi ekstra
+  String password = passwordController.text.trim();
 
-  print('Phone: $phone');
+  print('=== DEBUG LOG ===');
+  print('Email: $email');
   print('Password: $password');
+  print('==================');
 
-  final response = await http.post(
-    Uri.parse('http://10.0.2.2/uts/login.php'),
-    body: {
-      'phone': phone,  // Menggunakan nomor telepon yang sudah dibersihkan
-      'password': password,
-    },
-  );
+  try {
+    // Sign in menggunakan Firebase Authentication
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-  print('Response body: ${response.body}');
+    // Jika berhasil login
+    if (userCredential.user != null) {
+      print('Login berhasil: ${userCredential.user!.uid}');
 
-  if (response.statusCode == 200) {
-    try {
-      var data = jsonDecode(response.body);
+      // Simpan user_email ke SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_email', email);
+      print('Email pengguna berhasil disimpan ke SharedPreferences.');
 
-      if (data['status'] == 'success') {
-        // Login berhasil, simpan id_user ke SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('id_user', data['id_user']);  // Menyimpan id_user
-
-        // Arahkan pengguna ke halaman profil setelah login
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomePages(), // Arahkan ke halaman ProfilPage
-          ),
-        );
-      } else {
-        print('Error: ${data['message']}');
-        // Bisa menampilkan pesan error jika ada
-      }
-    } catch (e) {
-      print('Error parsing JSON: $e');
+      // Arahkan ke halaman HomePages
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePages(),
+        ),
+      );
+    } else {
+      print('Login gagal: UserCredential null.');
     }
-  } else {
-    print('Failed to load data: ${response.statusCode}');
-    // Bisa menampilkan pesan kesalahan jika gagal melakukan request
+  } on FirebaseAuthException catch (e) {
+    // Logging kesalahan dari FirebaseAuthException
+    print('FirebaseAuthException code: ${e.code}');
+    print('FirebaseAuthException message: ${e.message}');
+
+    String errorMessage;
+    if (e.code == 'user-not-found') {
+      errorMessage = 'Pengguna tidak ditemukan. Silakan periksa email Anda.';
+      print('DEBUG: Email tidak terdaftar di Firebase.');
+    } else if (e.code == 'wrong-password') {
+      errorMessage = 'Password yang Anda masukkan salah.';
+      print('DEBUG: Email terdaftar, tetapi password salah.');
+    } else {
+      errorMessage = 'Terjadi kesalahan: ${e.message}';
+      print('DEBUG: Kesalahan lainnya: ${e.message}');
+    }
+
+    // Tampilkan pesan kesalahan ke pengguna
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMessage)),
+    );
+  } catch (e) {
+    // Logging kesalahan umum
+    print('Kesalahan tidak terduga: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Terjadi kesalahan: $e')),
+    );
   }
 }
-
 
 
   @override
@@ -173,7 +186,7 @@ Future<void> _signInWithPhonePassword() async {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            "Enter your mobile number",
+                            "Enter your email",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w400,
@@ -181,29 +194,29 @@ Future<void> _signInWithPhonePassword() async {
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
-                            controller: phoneController,
-                            keyboardType: TextInputType.phone,
-                            inputFormatters: [
-                              FilteringTextInputFormatter
-                                  .digitsOnly, // Hanya angka
-                            ],
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Mobile number must be filled';
-                              }
-                              return null;
-                            },
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.phone),
-                              hintText: '+91 1712345678',
-                              suffixIcon: const Icon(
-                                Icons.check_circle_outline_outlined,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                          ),
+  controller: emailController,
+  keyboardType: TextInputType.emailAddress, // Keyboard mendukung format email
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return 'Email harus diisi';
+    }
+    if (!RegExp(r"^[^@]+@[^@]+\.[^@]+").hasMatch(value)) {
+      return 'Masukkan email yang valid';
+    }
+    return null;
+  },
+  decoration: InputDecoration(
+    prefixIcon: const Icon(Icons.email), // Ikon untuk email
+    hintText: 'Masukkan email Anda',
+    suffixIcon: const Icon(
+      Icons.check_circle_outline_outlined,
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(20),
+    ),
+  ),
+),
+
                           const SizedBox(height: 20),
                           const Text(
                             "Enter your password",
@@ -270,7 +283,7 @@ Future<void> _signInWithPhonePassword() async {
                           GestureDetector(
                             onTap: () {
                               if (_formKey.currentState?.validate() ?? false) {
-                                _signInWithPhonePassword(); // Panggil fungsi login
+                                _signInWithEmailPassword(); // Panggil fungsi login
                               }
                             },
                             child: Container(

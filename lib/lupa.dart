@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tes/login.dart';
 
 class ForgetPasswordPage extends StatefulWidget {
@@ -12,47 +12,50 @@ class ForgetPasswordPage extends StatefulWidget {
 }
 
 class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _verificationCodeController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
- Future<void> updatePassword(String phoneNumber, String newPassword) async {
-  final url = Uri.parse('http://10.0.2.2/uts/lupa.php'); // Ganti dengan URL server Anda
-  try {
-    final response = await http.post(url, body: {
-      'nomor': phoneNumber,
-      'password_baru': newPassword, // Kirim password baru ke server
-    });
+  String _verificationId = ''; // Menyimpan ID verifikasi
 
-    final responseData = json.decode(response.body);
-    if (response.statusCode == 200) {
-      if (responseData['status'] == 'success') {
-        // Jika berhasil, tampilkan pesan sukses
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'])),
-        );
-
-        // Arahkan ke halaman LoginPage
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPages()),
-        );
-      } else {
-        // Jika gagal, tampilkan pesan error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'])),
-        );
-      }
-    } else {
-      throw Exception('Gagal terhubung ke server');
+  // Kirim email verifikasi
+  Future<void> sendVerificationEmail(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kode verifikasi telah dikirim ke email Anda')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: $e')),
+      );
     }
-  } catch (error) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Terjadi kesalahan, coba lagi')),
-    );
   }
-}
 
+  // Perbarui password setelah verifikasi
+  Future<void> updatePassword(String email, String newPassword) async {
+    try {
+      await FirebaseAuth.instance.confirmPasswordReset(
+        code: _verificationId,
+        newPassword: newPassword,
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password berhasil diperbarui!')),
+      );
+
+      // Arahkan ke halaman Login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPages()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +102,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
               ),
               const SizedBox(height: 10),
               const Text(
-                "Don't worry! It happens. Please enter your phone number associated with your account.",
+                "Please enter your email associated with your account to receive a verification code.",
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
@@ -108,27 +111,49 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
               ),
               const SizedBox(height: 30),
 
-              // Form untuk nomor telepon
+              // Form untuk email
               TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: "Enter your mobile number",
-                  prefixIcon: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(width: 10),
-                      Text("+91"),
-                      Icon(Icons.arrow_drop_down),
-                    ],
-                  ),
-                  suffixIcon: const Icon(Icons.check_circle, color: Colors.black),
+                  hintText: "Enter your email",
+                  prefixIcon: const Icon(Icons.email),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.0),
                     borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Tombol Kirim Kode Verifikasi
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final email = _emailController.text;
+
+                    // Validasi format email
+                    if (!RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$").hasMatch(email)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Email tidak valid')),
+                      );
+                      return;
+                    }
+
+                    // Kirim kode verifikasi ke email
+                    sendVerificationEmail(email);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    "Send Verification Code",
+                    style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -169,17 +194,8 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    final phoneNumber = _phoneController.text;
                     final newPassword = _newPasswordController.text;
                     final confirmPassword = _confirmPasswordController.text;
-
-                    // Validasi format nomor telepon
-                    if (!RegExp(r'^08[0-9]{10}$').hasMatch(phoneNumber)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Nomor telepon tidak valid')),
-                      );
-                      return;
-                    }
 
                     // Validasi password baru dan konfirmasi password
                     if (newPassword != confirmPassword) {
@@ -189,8 +205,8 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                       return;
                     }
 
-                    // Kirim nomor telepon dan password baru untuk diperbarui
-                    updatePassword(phoneNumber, newPassword);
+                    // Kirim password baru untuk diperbarui
+                    updatePassword(_emailController.text, newPassword);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
@@ -200,7 +216,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                     ),
                   ),
                   child: const Text(
-                    "Perbarui Password",
+                    "Update Password",
                     style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w800),
                   ),
                 ),
