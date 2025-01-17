@@ -1,7 +1,6 @@
 import 'package:tes/profil1.dart';
 
 import 'lupa.dart';
-import 'profil.dart';
 import 'registrasi.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,7 +9,7 @@ import 'package:flutter/services.dart'; // Untuk menangani error di iOS
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'profil1.dart';
+import 'package:tes/mhs/home.dart';
 
 class LoginPages extends StatefulWidget {
   const LoginPages({super.key});
