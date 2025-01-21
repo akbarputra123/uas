@@ -34,6 +34,10 @@ dependencies:
   firebase_auth: ^5.3.4
   http: ^1.2.2
   shared_preferences: ^2.0.11
+  image: ^3.0.1
+  flutter_datetime_picker: ^1.5.1
+  intl: ^0.18.0
+  
   
 
   # The following adds the Cupertino Icons font to your application.
@@ -67,6 +71,7 @@ flutter:
   - assets/google.png
   - assets/apple.png
   - assets/ForgetPassword.png
+  - assets/b.png
   
 
   # An image asset can refer to one or more resolution-specific "variants", see

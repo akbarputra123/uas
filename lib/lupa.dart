@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tes/login.dart';
 
@@ -33,14 +31,31 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
     }
   }
 
+
+
+
+  // Kirim kode OTP ke email pengguna
+  Future<void> sendOtp(String email) async {
+    try {
+      await FirebaseAuth.instance.verifyPasswordResetCode(email); // Dummy Logic
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('OTP Sent')),
+      );
+      // simulasi success logic
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+    }
+  }
+
+
   // Perbarui password setelah verifikasi
-  Future<void> updatePassword(String email, String newPassword) async {
+  Future<void> updatePassword(String verificationCode, String newPassword) async {
     try {
       await FirebaseAuth.instance.confirmPasswordReset(
-        code: _verificationId,
+        code: verificationCode,
         newPassword: newPassword,
       );
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password berhasil diperbarui!')),
       );
@@ -152,75 +167,13 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                     ),
                   ),
                   child: const Text(
-                    "Send Verification Code",
+                    "Perbarui Password",
                     style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // Form untuk password baru
-              TextField(
-                controller: _newPasswordController,
-                obscureText: true, // Menyembunyikan password yang dimasukkan
-                decoration: InputDecoration(
-                  hintText: "Enter new password",
-                  prefixIcon: const Icon(Icons.lock),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    borderSide: const BorderSide(color: Colors.grey),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Form untuk konfirmasi password
-              TextField(
-                controller: _confirmPasswordController,
-                obscureText: true, // Menyembunyikan password yang dimasukkan
-                decoration: InputDecoration(
-                  hintText: "Confirm password",
-                  prefixIcon: const Icon(Icons.lock),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    borderSide: const BorderSide(color: Colors.grey),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // Tombol Perbarui Password
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final newPassword = _newPasswordController.text;
-                    final confirmPassword = _confirmPasswordController.text;
-
-                    // Validasi password baru dan konfirmasi password
-                    if (newPassword != confirmPassword) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Password tidak cocok')),
-                      );
-                      return;
-                    }
-
-                    // Kirim password baru untuk diperbarui
-                    updatePassword(_emailController.text, newPassword);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    "Update Password",
-                    style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
               const Spacer(flex: 2),
             ],
           ),

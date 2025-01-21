@@ -302,57 +302,9 @@ Future<void> registerUser(String phone, String email, String password) async {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "or",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // Tambahkan fungsi untuk login Google
-                        },
-                        icon: Image.asset(
-                          'assets/google.png',
-                          width: 24,
-                          height: 24,
-                        ),
-                        label: const Text("Continue with Google"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          side: const BorderSide(color: Colors.black),
-                          minimumSize: const Size(double.infinity, 50),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // Tambahkan fungsi untuk login Apple
-                        },
-                        icon: Image.asset(
-                          'assets/apple.png',
-                          width: 24,
-                          height: 24,
-                        ),
-                        label: const Text("Continue with Apple"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          side: const BorderSide(color: Colors.black),
-                          minimumSize: const Size(double.infinity, 50),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
+                    
+                        
+                   
                     ],
                   ),
                 ),

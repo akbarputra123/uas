@@ -1,5 +1,5 @@
-import 'package:tes/profil1.dart';
 
+import 'package:tes/admin/adminhome.dart';
 import 'lupa.dart';
 import 'registrasi.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart'; // Ganti dengan halaman yang sesuai setelah login
 import 'package:flutter/services.dart'; // Untuk menangani error di iOS
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tes/pages/home.dart';
 
 class LoginPages extends StatefulWidget {
   const LoginPages({super.key});
@@ -40,8 +41,7 @@ class _LoginPagesState extends State<LoginPages> {
       return; // Menghindari error jika user cancel
     }
 
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
     final OAuthCredential credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
@@ -49,15 +49,18 @@ class _LoginPagesState extends State<LoginPages> {
     );
 
     // Mencoba login menggunakan kredensial yang didapatkan
-    final UserCredential userCredential =
-        await _auth.signInWithCredential(credential);
+    final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
     if (userCredential.user != null) {
+      // Simpan idUser ke SharedPreferences dengan kunci 'idUser'
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('idUser', userCredential.user!.uid);
+
       // Login berhasil, arahkan ke halaman utama (ProfilPage)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) =>  HomePages(), // Ganti dengan halaman ProfilPage
+          builder: (context) => UserDashboard(), // Ganti dengan halaman ProfilPage
         ),
       );
     }
@@ -67,6 +70,7 @@ class _LoginPagesState extends State<LoginPages> {
     // Anda bisa menampilkan pesan kesalahan jika diperlukan
   }
 }
+
   // Fungsi untuk login dengan Apple
   Future<void> _signInWithApple() async {
     try {
@@ -88,74 +92,85 @@ class _LoginPagesState extends State<LoginPages> {
     }
   }
 // Ambil id_user yang disimpan di SharedPreferences
-  Future<int?> getUserId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('id_user');
-  }
+Future<String?> getUserId() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  return prefs.getString('idUser');  // Ambil UID menggunakan kunci yang sama
+}
+
 Future<void> _signInWithEmailPassword() async {
-  String email = emailController.text.trim(); // Menghapus spasi ekstra
+  String email = emailController.text.trim();
   String password = passwordController.text.trim();
 
   print('=== DEBUG LOG ===');
   print('Email: $email');
   print('Password: $password');
-  print('==================');
+  print('==================' );
+
+  // Cek jika email adalah admin
+  if (email == 'admin@gmail.com' && password == '123') {
+    print('Login sebagai Admin');
+
+    // Simpan idUser sebagai admin ke SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('idUser', 'admin'); // Menyimpan ID sebagai admin
+
+    // Arahkan ke halaman Admin
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdminDashboard(), // Halaman khusus untuk admin
+      ),
+    );
+    return; // Menghentikan eksekusi agar tidak melakukan login Firebase
+  }
 
   try {
-    // Sign in menggunakan Firebase Authentication
+    // Jika bukan admin, lakukan login menggunakan Firebase
     UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
 
-    // Jika berhasil login
     if (userCredential.user != null) {
       print('Login berhasil: ${userCredential.user!.uid}');
 
-      // Simpan user_email ke SharedPreferences
+      // Simpan idUser ke SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', email);
-      print('Email pengguna berhasil disimpan ke SharedPreferences.');
+      await prefs.setString('idUser', userCredential.user!.uid); // Menyimpan UID pengguna
 
-      // Arahkan ke halaman HomePages
+      print('UID pengguna berhasil disimpan ke SharedPreferences.');
+
+      // Arahkan ke halaman sesuai (HomePages untuk pengguna biasa)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => HomePages(),
+          builder: (context) => UserDashboard(), // Halaman home untuk pengguna biasa
         ),
       );
     } else {
       print('Login gagal: UserCredential null.');
     }
   } on FirebaseAuthException catch (e) {
-    // Logging kesalahan dari FirebaseAuthException
-    print('FirebaseAuthException code: ${e.code}');
-    print('FirebaseAuthException message: ${e.message}');
-
     String errorMessage;
     if (e.code == 'user-not-found') {
       errorMessage = 'Pengguna tidak ditemukan. Silakan periksa email Anda.';
-      print('DEBUG: Email tidak terdaftar di Firebase.');
     } else if (e.code == 'wrong-password') {
       errorMessage = 'Password yang Anda masukkan salah.';
-      print('DEBUG: Email terdaftar, tetapi password salah.');
     } else {
       errorMessage = 'Terjadi kesalahan: ${e.message}';
-      print('DEBUG: Kesalahan lainnya: ${e.message}');
     }
 
-    // Tampilkan pesan kesalahan ke pengguna
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(errorMessage)),
     );
   } catch (e) {
-    // Logging kesalahan umum
-    print('Kesalahan tidak terduga: $e');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Terjadi kesalahan: $e')),
     );
   }
 }
+
+
 
 
   @override
@@ -331,86 +346,8 @@ Future<void> _signInWithEmailPassword() async {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "or",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          ElevatedButton.icon(
-                            onPressed: _signInWithGoogle,
-                            icon: Image.asset(
-                              'assets/google.png',
-                              width: 24,
-                              height: 24,
-                            ),
-                            label: const Text("Continue with Google"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              side: const BorderSide(color: Colors.black),
-                              minimumSize: const Size(double.infinity, 50),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          ElevatedButton.icon(
-                            onPressed: _signInWithApple,
-                            icon: Image.asset(
-                              'assets/apple.png',
-                              width: 24,
-                              height: 24,
-                            ),
-                            label: const Text("Continue with Apple"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              side: const BorderSide(color: Colors.black),
-                              minimumSize: const Size(double.infinity, 50),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "or",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: () {
-                              // Handle guest login here
-                            },
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Continue as Guest",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.black,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
+                        
+                       
                         ],
                       ),
                     ),
